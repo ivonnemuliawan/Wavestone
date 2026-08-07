@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HKJC AI Cyber Security Derby</title>
+  <style>
+    :root {
+      --hkjc-green: #004d25;
+      --hkjc-gold: #ffc72c;
+      --card-bg: #11281a;
+      --safe-color: #22c55e;
+      --threat-color: #ef4444;
+      --text-color: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh; /* Dynamic viewport height for mobile browsers */
+      overflow: hidden;
+      overscroll-behavior: none; /* Prevents pull-to-refresh / rubber banding */
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--hkjc-green);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(10px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom)) 16px;
+      background-image: radial-gradient(circle at center, #005a2b 0%, #003318 100%);
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    h1 {
+      font-size: clamp(1.3rem, 5.5vw, 1.8rem);
+      color: var(--hkjc-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: clamp(0.75rem, 3vw, 0.9rem);
+      color: #a3e635;
+      margin-top: 3px;
+      font-weight: 600;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(0.85rem, 3.8vw, 1.1rem);
+      margin-top: 10px;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--hkjc-gold);
+    }
+
+    .lives span {
+      font-size: clamp(1.1rem, 4vw, 1.4rem);
+      letter-spacing: 1px;
+    }
+
+    .game-area {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      height: clamp(280px, 50dvh, 420px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0;
+    }
+
+    .card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      border: 2px solid var(--hkjc-gold);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: grab;
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+      touch-action: none;
+    }
+
+    .card:active {
+      cursor: grabbing;
+    }
+
+    .badge {
+      align-self: flex-start;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-weight: bold;
+      font-size: clamp(0.7rem, 2.8vw, 0.8rem);
+      text-transform: uppercase;
+      background: var(--hkjc-green);
+      color: var(--hkjc-gold);
+      border: 1px solid var(--hkjc-gold);
+    }
+
+    .prompt-box {
+      background: #08140d;
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255, 199, 44, 0.3);
+      margin: 10px 0;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: clamp(0.9rem, 3.8vw, 1.1rem);
+      line-height: 1.4;
+      overflow-y: auto;
+    }
+
+    .team-tag {
+      font-weight: 600;
+      color: var(--hkjc-gold);
+      font-size: clamp(0.85rem, 3.5vw, 1rem);
+      text-align: center;
+    }
+
+    .swipe-overlay {
+      position: absolute;
+      top: 20px;
+      font-size: clamp(1.2rem, 5vw, 1.6rem);
+      font-weight: 900;
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 3px solid;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease;
+      z-index: 10;
+    }
+
+    .overlay-safe {
+      right: 15px;
+      color: var(--safe-color);
+      border-color: var(--safe-color);
+      transform: rotate(12deg);
+    }
+
+    .overlay-threat {
+      left: 15px;
+      color: var(--threat-color);
+      border-color: var(--threat-color);
+      transform: rotate(-12deg);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 8px;
+      border: none;
+      border-radius: 14px;
+      font-size: clamp(0.8rem, 3.2vw, 0.95rem);
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-threat {
+      background: var(--threat-color);
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-safe {
+      background: var(--safe-color);
+      box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+      padding: 20px;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      padding: 30px 20px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      border: 2px solid var(--hkjc-gold);
+    }
+
+    .modal h2 {
+      font-size: 1.8rem;
+      color: var(--hkjc-gold);
+      margin-bottom: 10px;
+    }
+
+    .restart-btn {
+      margin-top: 20px;
+      padding: 14px 28px;
+      background: var(--hkjc-gold);
+      color: var(--hkjc-green);
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>HKJC Cyber Derby 🏇</h1>
+    <div class="subtitle">Swipe to Clear AI Hurdles!</div>
+    <div class="scoreboard">
+      <div>Score: <span id="score">0</span></div>
+      <div class="lives">Hurdles: <span id="lives">🏇🏇🏇</span></div>
+    </div>
+  </header>
+
+  <div class="game-area">
+    <div class="card" id="card">
+      <div class="swipe-overlay overlay-threat">THREAT ✖</div>
+      <div class="swipe-overlay overlay-safe">SAFE ✔</div>
+      <div class="badge">Public AI Prompt Inquiry</div>
+      <div class="prompt-box" id="prompt-text">Loading race scenario...</div>
+      <div class="team-tag" id="team-text">Department</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-threat" onclick="handleSwipe(false)">
+      <span>👈 SWIPE LEFT</span>
+      <span style="font-size: 0.75em; opacity: 0.9;">(Cyber Threat)</span>
+    </button>
+    <button class="btn btn-safe" onclick="handleSwipe(true)">
+      <span>SWIPE RIGHT 👉</span>
+      <span style="font-size: 0.75em; opacity: 0.9;">(Cyber Safe)</span>
+    </button>
+  </div>
+
+  <div class="modal" id="game-over-modal">
+    <div class="modal-content">
+      <h2>Race Finished! 🏁</h2>
+      <p style="font-size: 1.1rem; margin-top: 8px;">Final Score: <span id="final-score">0</span></p>
+      <button class="restart-btn" onclick="resetGame()">Run Another Race</button>
+    </div>
+  </div>
+
+  <script>
+    const scenarios = [
+      {
+        team: "Human Resources Team",
+        prompt: "Draft a job description for an Assistant IT Operations Manager role at Happy Valley Racecourse.",
+        isSafe: true 
+      },
+      {
+        team: "Wagering & Operations Team",
+        prompt: "Compare vendor pricing breakdowns and summarize contractual terms for new totalisator system hardware.",
+        isSafe: false
+      },
+      {
+        team: "Marketing & Communications Team",
+        prompt: "Generate a Christmas greeting social media design for our corporate Instagram page.",
+        isSafe: false
+      },
+      {
+        team: "Legal & Governance Team",
+        prompt: "Summarize and compare Hong Kong Personal Data (Privacy) Ordinance with Singapore PDPA in a report format.",
+        isSafe: true 
+      },
+      {
+        team: "Membership Services Team",
+        prompt: "Compare two member CVs and evaluate who is best qualified for the VIP Lounge Hospitality Supervisor position.",
+        isSafe: false
+      },
+      {
+        team: "IT Racing Systems Team",
+        prompt: "Check logic bugs in our web application code:\n\ndocument.querySelector('.bet-btn').addEventListener('click', function() { alert('HKJC_Bet Placed'); });",
+        isSafe: false
+      }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let lives = 3;
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    const card = document.getElementById('card');
+    const promptText = document.getElementById('prompt-text');
+    const teamText = document.getElementById('team-text');
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const overlaySafe = card.querySelector('.overlay-safe');
+    const overlayThreat = card.querySelector('.overlay-threat');
+    const gameOverModal = document.getElementById('game-over-modal');
+
+    function updateCard() {
+      if (currentIdx >= scenarios.length) {
+        currentIdx = 0;
+      }
+      const data = scenarios[currentIdx];
+      promptText.innerText = `"${data.prompt}"`;
+      teamText.innerText = `— ${data.team}`;
+      card.style.transform = 'translate(0px, 0px) rotate(0deg)';
+      overlaySafe.style.opacity = '0';
+      overlayThreat.style.opacity = '0';
+    }
+
+    function processAnswer(userSaysSafe) {
+      const correct = scenarios[currentIdx].isSafe === userSaysSafe;
+      if (correct) {
+        score += 100;
+        scoreEl.innerText = score;
+      } else {
+        lives -= 1;
+        livesEl.innerText = '🏇'.repeat(Math.max(0, lives));
+        if (lives <= 0) {
+          endGame();
+          return;
+        }
+      }
+      currentIdx++;
+      updateCard();
+    }
+
+    function handleSwipe(isSafe) {
+      const flyOutX = isSafe ? 800 : -800;
+      card.style.transition = 'transform 0.35s ease';
+      card.style.transform = `translate(${flyOutX}px, 0px) rotate(${isSafe ? 25 : -25}deg)`;
+      setTimeout(() => {
+        card.style.transition = 'none';
+        processAnswer(isSafe);
+      }, 250);
+    }
+
+    function startDrag(e) {
+      isDragging = true;
+      startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      card.style.transition = 'none';
+    }
+
+    function moveDrag(e) {
+      if (!isDragging) return;
+      currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      const diffX = currentX - startX;
+      const rotate = diffX * 0.06;
+      card.style.transform = `translate(${diffX}px, 0px) rotate(${rotate}deg)`;
+
+      if (diffX > 40) {
+        overlaySafe.style.opacity = Math.min((diffX - 40) / 80, 1);
+        overlayThreat.style.opacity = '0';
+      } else if (diffX < -40) {
+        overlayThreat.style.opacity = Math.min((-diffX - 40) / 80, 1);
+        overlaySafe.style.opacity = '0';
+      } else {
+        overlaySafe.style.opacity = '0';
+        overlayThreat.style.opacity = '0';
+      }
+    }
+
+    function endDrag() {
+      if (!isDragging) return;
+      isDragging = false;
+      const diffX = currentX - startX;
+      if (diffX > 90) {
+        handleSwipe(true);
+      } else if (diffX < -90) {
+        handleSwipe(false);
+      } else {
+        card.style.transition = 'transform 0.2s ease';
+        card.style.transform = 'translate(0px, 0px) rotate(0deg)';
+        overlaySafe.style.opacity = '0';
+        overlayThreat.style.opacity = '0';
+      }
+    }
+
+    card.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', moveDrag);
+    document.addEventListener('mouseup', endDrag);
+
+    card.addEventListener('touchstart', startDrag, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+      if (isDragging) moveDrag(e);
+    }, { passive: true });
+    document.addEventListener('touchend', endDrag);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') handleSwipe(false);
+      if (e.key === 'ArrowRight') handleSwipe(true);
+    });
+
+    function endGame() {
+      document.getElementById('final-score').innerText = score;
+      gameOverModal.classList.add('active');
+    }
+
+    function resetGame() {
+      score = 0;
+      lives = 3;
+      currentIdx = 0;
+      scoreEl.innerText = score;
+      livesEl.innerText = '🏇🏇🏇';
+      gameOverModal.classList.remove('active');
+      updateCard();
+    }
+
+    updateCard();
+  </script>
+</body>
+</html>
